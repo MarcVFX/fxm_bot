@@ -1,5 +1,11 @@
-# Comandos traduzidos da versão 0.5
-Um dos destaques da nova versão 0.5 é a de que a maior parte dos comandos foram traduzidos para o PT-BR, segue abaixo uma lista de todas as variações possíveis
+# Comandos traduzidos da versão 0.6
+Um dos destaques da nova versão 0.6 é a de que a maior parte dos comandos foram traduzidos para o PT-BR, segue abaixo uma lista de todas as variações possíveis
+
+### Dimensões `(Geral)`
+`dimensões`, `dimensions`, `tamanhos` e `sizes`
+
+### Layouts `(Geral)`
+`layouts` e `layout`
 
 ### ChatBot `(Geral)`
 `chat` e `conversa`
