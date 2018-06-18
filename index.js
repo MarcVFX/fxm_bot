@@ -1762,7 +1762,7 @@ var a = schedule.scheduleJob('0 0 * * *', function(){ // Automação de atualiza
 var b = schedule.scheduleJob('0 23 * * *', function(){ // Automação dos commits do github
     commit()
 })
-var c = schedule.scheduleJob('0 23 * * *', ()=>{ // Automação da criação de arquivos de mensagens coletadas
+var c = schedule.scheduleJob('0 22 * * *', ()=>{ // Automação da criação de arquivos de mensagens coletadas
     var date = new Date().toISOString().split("-").join("").split(":").join("").split(".").join("")
     fs.writeFile("./ChatTraining/colectedMessages/" + date + ".txt",colectedChatTrainingMessages,(err) =>{
         if(err) console.log(err)
