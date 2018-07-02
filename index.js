@@ -524,14 +524,17 @@ client.on("guildMemberAdd", member =>{
     let third = `Nós da FX Masters agradecemos a sua presença, qualquer dúvida, reclamação ou qualquer outra necessidade, basta mencionar um __**Dono**__ ou um __**Admin**__.\n\n`
     let fourht = `Você recebeu uma outra mensagem no canal <#380361996404785162>, faça o que ela diz para ter uma maior interação com o bot\n\n`
     let fifth = `Marcus Aires - Fundador e Dono da FX Masters`
-    let toSend = first+second+third+fourht
-    client.guilds.find("name", "FXM").channels.get("380375204150378496").send(toSend).then(msg=>{
+    let toSend1 = first
+    let toSend2 = second+third+fourht+fifth
+    client.guilds.find("name", "FXM").channels.get("380375204150378496").send(toSend1).then(msg=>{
+        msg.channel.send(toSend2).then(msg =>{
+            setTimeout(()=>{
+                msg.delete()
+            },minsToMilSecs(1))
+        })
         setTimeout(()=>{
             toCommands()
         },secsToMilSecs(10))
-        setTimeout(()=>{
-            msg.delete()
-        },minsToMilSecs(1))
     })
     function toCommands(){
         first = `<@${member.id}>, vamos definir o seu canal do YouTube como um perfil no bot, assim as pessoas podem ver o seu canal sem precisar abrir o navegador\n`
