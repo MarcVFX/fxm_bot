@@ -8,11 +8,12 @@ Variáveis
    \ \/ // _` || '__|| | / _` |\ \ / // _ \| |/ __|
     \  /| (_| || |   | || (_| | \ V /|  __/| |\__ \
      \/  \__,_||_|   |_| \__,_|  \_/  \___||_||___/
- 
+
 ==================================================================================================
 Variáveis
 ==================================================================================================
 */
+require('isomorphic-fetch')
 const Discord = require("discord.js");
 const client = new Discord.Client();
 const fs = require("fs");
@@ -23,16 +24,26 @@ const google = require("google")
     google.nextText = 'Mais'
 const shortener = require("tinyurl")
 const snekfetch = require("snekfetch")
-const { gitCommitPush } = require("git-commit-push-via-github-api")
+const dropboxV2Api = require('dropbox-v2-api');
 
-const gitToken = process.env.GITHUB_TOKEN
+var herokuDbxToken = process.env.HEROKU_TOKEN
+var { dbxToken } = require ("./Database/Const/token.json")
+var dbx
 
-var preMessages = require("./Database/mensagens.json")
-var config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+if (herokuDbxToken) dbx = dropboxV2Api.authenticate({token: herokuDbxToken})
+else dbx = dropboxV2Api.authenticate({token: dbxToken})
+
+
+var herokuToken = process.env.BOT_TOKEN
+var { token } = require("./Database/Const/token.json")
+
+var preMessages = require("./Database/Const/mensagens.json")
+var config = JSON.parse(fs.readFileSync("./Database/Const/config.json", "utf8"));
 var banned = JSON.parse(fs.readFileSync("./Database/banidos.json", "utf8"));
 var warneds = JSON.parse(fs.readFileSync("./Database/avisados.json", "utf8"))
 var changelog = JSON.parse(fs.readFileSync("./Database/changelog.json", "utf8"))
 var profiles = JSON.parse(fs.readFileSync("./Database/profiles.json", "utf8"))
+
 
 var muted = new Set();
 var appealList = new Set();
@@ -77,114 +88,60 @@ Funções
                     )_)                
 
 ==================================================================================================
-Funçoes
+Funções
 ==================================================================================================
 */
 
-//Commits do github 
-async function commit(){
-    console.log("Starting GitHub commits\n---------------------------")
 
-    // Commit das mensagens coletadas anônimamente
-    var files = fs.readdirSync('./ChatTraining/colectedMessages')
-    files.forEach(key =>{
-        gitCommitPush({
-            owner: "MarcVFX",
-            repo: "fxm_bot",
-            token: gitToken,
-    
-            files : [{ path: "ChatTraining/colectedMessages", content: fs.readFileSync('./ChatTraining/colectedMessages/' + key, "utf-8")}],
-            fullyQualifiedRef: "heads/master",
-            commitMessage: "Automatic Message Colector TXTs commit"
-        }).then(res =>{
-            console.log("Messages saved\n---------------------------")
-        }).catch(err =>{
-            console.error(err)
-        })
+// Download dos arquivos da nuvem
+function downloadFiles (file){
+    dbx({
+        resource: 'files/download',
+        parameters: {
+            path: '/FXM Bot/Database/' + file
+        }
+    }, (err, result, response) => {
+        //download completed
     })
+    .pipe(fs.createWriteStream('./Database/' + file))
+}
 
-    // Commit dos banidos
-    await gitCommitPush({
-        owner: "MarcVFX",
-        repo: "fxm_bot",
-        token: gitToken,
-
-        files : [{ path: "Database/banidos.json", content: fs.readFileSync("./Database/banidos.json", "utf-8")}],
-        fullyQualifiedRef: "heads/master",
-        commitMessage: "Automatic bannedSave() JSON commit"
-    }).then(res =>{
-        console.log("Bans saved\n---------------------------")
-    }).catch(err =>{
-        console.error(err)
+// Upload dos arquivos na nuvem
+function uploadFiles (file){
+    dbx({
+        resource: 'files/upload',
+        parameters: {
+            path: '/FXM Bot/Database/' + file
+        },
+        readStream: fs.createReadStream('./Database/' + file)
+    }, (err, result, response) => {
+        //upload completed
     })
-
-    // Commit dos avisos
-    await gitCommitPush({
-        owner: "MarcVFX",
-        repo: "fxm_bot",
-        token: gitToken,
-
-        files : [{ path: "Database/avisados.json", content: fs.readFileSync("./Database/avisados.json", "utf-8")}],
-        fullyQualifiedRef: "heads/master",
-        commitMessage: "Automatic warndsSave() JSON commit"
-    }).then(res =>{
-        console.log("Warns saved\n---------------------------")
-    }).catch(err =>{
-        console.error(err)
-    })
-
-    // Commit do changelog
-    await gitCommitPush({
-        owner: "MarcVFX",
-        repo: "fxm_bot",
-        token: gitToken,
-
-        files : [{ path: "Database/changelog.json", content: fs.readFileSync("./Database/changelog.json", "utf-8")}],
-        fullyQualifiedRef: "heads/master",
-        commitMessage: "Automatic changelogSave() JSON commit"
-    }).then(res =>{
-        console.log("Changelog saved\n---------------------------")
-    }).catch(err =>{
-        console.error(err)
-    })
-
-    // Commit dos perfis do youtube
-    await gitCommitPush({
-        owner: "MarcVFX",
-        repo: "fxm_bot",
-        token: gitToken,
-
-        files : [{ path: "Database/profiles.json", content: fs.readFileSync("./Database/profiles.json", "utf-8")}],
-        fullyQualifiedRef: "heads/master",
-        commitMessage: "Automatic profileSave() JSON commit"
-    }).then(res =>{
-        console.log("Profiles saved\n---------------------------")
-    }).catch(err =>{
-        console.error(err)
-    })
-    console.log("Finished GitHub commits")
-    
 }
 
 // Funções de salvamento dos json
 function bannedSave(){
     fs.writeFile("./Database/banidos.json", JSON.stringify(banned), (err) => {
         if (err) console.error(err)
+        uploadFiles("banidos.json")
       });
 }
 function warnedsSave(){
     fs.writeFile("./Database/avisados.json", JSON.stringify(warneds), (err) => {
         if (err) console.error(err)
+        uploadFiles("avisados.json")
       }); 
 }
 function changelogSave(){
     fs.writeFile("./Database/changelog.json", JSON.stringify(changelog), (err) => {
         if (err) console.error(err)
+        uploadFiles("changelog.json")
     }); 
 }
 function profileSave(){
     fs.writeFile("./Database/profiles.json", JSON.stringify(profiles), (err) => {
         if (err) console.error(err)
+        uploadFiles("profiles.json")
     }); 
 }
 
@@ -407,7 +364,7 @@ client.on("messageReactionAdd", (reaction, user) =>{
     }
 })
 
-
+var canReceiveCommands = false
 /*
 ==================================================================================================
 Pronto
@@ -424,7 +381,8 @@ Pronto
 ==================================================================================================
 */
 client.on("ready", () =>{
-    client.user.setPresence({game:{name: config.prefix + "help", type: 0}});
+    client.user.setStatus("dnd")
+    client.user.setPresence({game:{name: "Iniciando", type: 0}});
     console.log(" ")
     console.log(" ")
     console.log("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
@@ -432,6 +390,33 @@ client.on("ready", () =>{
     console.log("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     console.log(" ")
     console.log(" ")
+    console.log("Downloading files")
+    dlfl()
+    async function dlfl (){
+        await downloadFiles("banidos.json")
+        console.log("Banneds downloaded")
+        await downloadFiles("avisados.json")
+        console.log("Warneds downloaded")
+        await downloadFiles("changelog.json")
+        console.log("Changelog downloaded")
+        await downloadFiles("profiles.json")
+        console.log("Profiles downloaded\nAll files downloaded\nStarting to parse files to vars")
+        setTimeout(()=>{
+            console.log("Getting downloaded files info:")
+            banned = JSON.parse(fs.readFileSync("./Database/banidos.json", "utf8"));
+            console.log("Banneds;")
+            warneds = JSON.parse(fs.readFileSync("./Database/avisados.json", "utf8"))
+            console.log("Warneds;")
+            changelog = JSON.parse(fs.readFileSync("./Database/changelog.json", "utf8"))
+            console.log("Changelog;")
+            profiles = JSON.parse(fs.readFileSync("./Database/profiles.json", "utf8"))
+            console.log("Profiles.\nFiles download successful")
+            canReceiveCommands = true
+            client.user.setStatus("online")
+            client.user.setPresence({game:{name: config.prefix + "help", type: 0}});
+        },secsToMilSecs(60))
+    }
+
 });
 /*
 ==================================================================================================
@@ -584,7 +569,6 @@ client.on("message", (message) =>{
     if (!message.content.startsWith(config.prefix)){
         colectedChatTrainingMessages = colectedChatTrainingMessages + `${message.content}\r\n`
     }
-
     // Dividindo a mensagem em argumentos
     var args = message.content.split(" ");
 // Sem prefixo abaixo
@@ -593,7 +577,7 @@ client.on("message", (message) =>{
         return;
     }
 // com prefixo abaixo
-    if(message.author.bot) return;
+    if(message.author.bot && !canReceiveCommands) return;
 
     // Comando de D1F
     if(message.channel.name == "d1f" && !message.content.includes("http")){
@@ -648,7 +632,7 @@ client.on("message", (message) =>{
                 // Caso a mensagem não seja compreendida...
                 if(r.body.result.fulfillment.speech == "Não entendi, mas sua mensagem foi salva para que possa ser usada no meu treinamento"){
                     entry = decodeURIComponent(entry) // ...crie um arquivo para treinamento
-                    fs.writeFile("./ChatTraining/" + message.createdTimestamp + ".txt", entry, (err) =>{
+                    fs.writeFile("./Database/ChatTraining/" + message.createdTimestamp + ".txt", entry, (err) =>{
                         if (err) throw err
                     })
                 }
@@ -752,7 +736,7 @@ client.on("message", (message) =>{
         case "shorter":
         case "encurtar":
         case "encurtardor":
-            if(args[0] == undefined && !message.content.includes("http")){ // Verifica se há alguma URL
+            if(args[0] == undefined || message.content.includes("http")){ // Verifica se há alguma URL
                 message.channel.send("Você precisa especificar uma URL a ser encurtada")
                 return;
             }
@@ -1762,13 +1746,21 @@ var a = schedule.scheduleJob('0 0 * * *', function(){ // Automação de atualiza
         updateProfile(id)
     })
 })
-var b = schedule.scheduleJob('0 23 * * *', function(){ // Automação dos commits do github
-    commit()
-})
-var c = schedule.scheduleJob('0 22 * * *', ()=>{ // Automação da criação de arquivos de mensagens coletadas
+
+var c = schedule.scheduleJob('0 23 * * *', ()=>{ // Automação da criação de arquivos de mensagens coletadas
     var date = new Date().toISOString().split("-").join("").split(":").join("").split(".").join("")
-    fs.writeFile("./ChatTraining/colectedMessages/" + date + ".txt",colectedChatTrainingMessages,(err) =>{
+    var file = date + ".txt"
+    fs.writeFile("./Database/ChatTraining/colectedMessages/" + file,colectedChatTrainingMessages,(err) =>{
         if(err) console.log(err)
+        dbx({
+            resource: 'files/upload',
+            parameters: {
+                path: '/FXM Bot/ChatTraining/colectedMessages/' + file
+            },
+            readStream: fs.createReadStream('./Database/ChatTraining/colectedMessages/' + file)
+        }, (err, result, response) => {
+            //upload completed
+        })
     })
 })
 
@@ -1789,7 +1781,7 @@ Login
 Login
 ==================================================================================================
 */
+if (herokuToken) client.login(herokuToken) // Faz login
+else client.login(token) // Faz login
 
-client.login(process.env.BOT_TOKEN) // Faz login
 process.on('unhandledRejection', err => console.error(`Uncaught Promise Rejection: \n${err.stack}`)); // Unhandled Promise Catcher
-
