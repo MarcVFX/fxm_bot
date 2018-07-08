@@ -25,6 +25,7 @@ const google = require("google")
 const shortener = require("tinyurl")
 const snekfetch = require("snekfetch")
 const dropboxV2Api = require('dropbox-v2-api');
+const youtubeRating = require("./youtube-rating.js")
 
 var herokuDbxToken = process.env.HEROKU_TOKEN
 var { dbxToken } = require ("./Database/Const/token.json")
@@ -43,11 +44,14 @@ var banned = JSON.parse(fs.readFileSync("./Database/banidos.json", "utf8"));
 var warneds = JSON.parse(fs.readFileSync("./Database/avisados.json", "utf8"))
 var changelog = JSON.parse(fs.readFileSync("./Database/changelog.json", "utf8"))
 var profiles = JSON.parse(fs.readFileSync("./Database/profiles.json", "utf8"))
+var ytbTokens = JSON.parse(fs.readFileSync("./Database/youtube-tokens.json", "utf8"))
 
 
 var muted = new Set();
 var appealList = new Set();
 var onChat = new Set();
+var youtubeTokenAwait = new Set();
+var youtubeComment = {}
 
 var warnResponse = ""
 var messageContainer
@@ -120,6 +124,12 @@ function uploadFiles (file){
 }
 
 // Funções de salvamento dos json
+function youtubeTokensSave(){
+    fs.writeFile("./Database/youtube-tokens.json", JSON.stringify(ytbTokens), (err) => {
+        if (err) console.error(err)
+        uploadFiles("youtube-tokens.json")
+      });
+}
 function bannedSave(){
     fs.writeFile("./Database/banidos.json", JSON.stringify(banned), (err) => {
         if (err) console.error(err)
@@ -362,7 +372,94 @@ client.on("messageReactionAdd", (reaction, user) =>{
             return;
         }
     }
+    console.log(reaction.emoji.id)
+        if (reaction.emoji.id == "465243997292724245"){ //like
+            
+            var userId = user.id
+            if (ytbTokens[userId]){
+                youtubeRating.rate(checkVideoId(reaction.message),"like",ytbTokens[userId].token)
+                reaction.message.channel.send("Like enviado").then(msg => {
+                    setTimeout(()=>{
+                        msg.delete()
+                    },secsToMilSecs(10))
+                })
+            }
+            else{
+                getToken(reaction.message,user)
+            }
+        }
+        if (reaction.emoji.id == "465244039176781824"){ //dislike
+            var userId = user.id
+            if (ytbTokens[userId]){
+                youtubeRating.rate(checkVideoId(reaction.message),"dislike",ytbTokens[userId].token)
+                reaction.message.channel.send("Dislike enviado").then(msg => {
+                    setTimeout(()=>{
+                        msg.delete()
+                    },secsToMilSecs(10))
+                })
+            }
+            else{
+                getToken(reaction.message,user)
+            }
+        }
+        if (reaction.emoji.id == "465244035825664000"){ //comment
+            var userId = user.id
+            if (ytbTokens[userId]){
+                youtubeComment[userId] = {
+                    userId : userId,
+                    videoId : checkVideoId(reaction.message)
+                }
+                reaction.message.channel.send("Digite um comentário a ser enviado").then(msg => {
+                    setTimeout(()=>{
+                        msg.delete()
+                    },secsToMilSecs(10))
+                })
+            }
+            else{
+                getToken(reaction.message,user)
+            }
+        }
 })
+
+function checkVideoId(message){
+    if(!message){
+        console.log("Message not defined")
+        return;
+    }
+    var linkArgs = message.content.split(" ")
+    var link = linkArgs[0]
+
+    if(link.includes("youtu.be")){
+        linkArgs = link.split("youtu.be/")
+        var id = linkArgs[1]
+        return id
+    }
+    else if (link.includes("youtube")){
+        linkArgs = link.split("watch?v=")
+        var id = linkArgs[1]
+        return id
+    }
+    else console.log("Invalid youtube link: "+link)
+}
+
+function getToken(message,user){
+    if(!message){
+        console.log("Message not defined")
+        return
+    }
+    if(!user){
+        console.log("Message not defined")
+        return
+    }
+    message.channel.send("Você ainda não deu autorização ao bot, uma mensagem com os detalhes foi enviada na sua DM").then(msg => {
+        setTimeout(()=>{
+            msg.delete()
+        },secsToMilSecs(10))
+    })
+    user.send("**LEIA TODOS OS PASSOS ANTES DE PROSSEGUIR**\nPasso a passo para autorizar o bot a dar likes, deslikes e comentar por você:")
+    user.send(`1- Entre neste link: ${youtubeRating.authURL}\n2- Faça login na sua conta ou escolha uma dentre as opções\n3- Você será redirecionado à uma página em branco, **NÃO FECHE-A**, envie a URL de volta para mim`)
+    youtubeTokenAwait.add(user.id)
+}
 
 var canReceiveCommands = false
 /*
@@ -383,6 +480,7 @@ Pronto
 client.on("ready", () =>{
     client.user.setStatus("dnd")
     client.user.setPresence({game:{name: "Iniciando", type: 0}});
+    dlfl()
     console.log(" ")
     console.log(" ")
     console.log("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
@@ -391,8 +489,9 @@ client.on("ready", () =>{
     console.log(" ")
     console.log(" ")
     console.log("Downloading files")
-    dlfl()
     async function dlfl (){
+        await downloadFiles("youtube-tokens.json")
+        console.log("Youtube Tokens downloaded")
         await downloadFiles("banidos.json")
         console.log("Banneds downloaded")
         await downloadFiles("avisados.json")
@@ -414,7 +513,7 @@ client.on("ready", () =>{
             canReceiveCommands = true
             client.user.setStatus("online")
             client.user.setPresence({game:{name: config.prefix + "help", type: 0}});
-        },secsToMilSecs(60))
+        },secsToMilSecs(20))
     }
 
 });
@@ -565,6 +664,44 @@ Mensagem
 ==================================================================================================
 */
 client.on("message", (message) =>{  
+
+    if(message.channel.name == "links" && (message.content.includes("youtube") || message.content.includes("youtu.be"))){
+        message.react("465243997292724245")
+        .then(message.react("465244039176781824")
+            .then(message.react("465244035825664000")))
+    }
+
+    if(youtubeComment[message.author.id]){
+        youtubeRating.addComment(youtubeComment[message.author.id].videoId,message.content,ytbTokens[message.author.id].token)
+        message.delete()
+        message.channel.send("Comentário adicionado").then(msg => {
+            setTimeout(()=>{
+                msg.delete()
+            },secsToMilSecs(10))
+        })
+        delete youtubeComment[message.author.id]
+    }
+
+    if(youtubeTokenAwait.has(message.author.id)){
+        async function getToken(){
+            var response = await youtubeRating.authenticate(message.content)
+            ytbTokens[message.author.id] = {
+                token: response.body.access_token,
+                newToken: response.body.refresh_token
+            }
+            youtubeTokensSave()
+        }
+        getToken()
+        
+        message.channel.send("Sua autorização foi bem sucedida, remova a reação e adicione-a novamente").then(msg => {
+            setTimeout(()=>{
+                msg.delete()
+            },secsToMilSecs(10))
+        })
+        youtubeTokenAwait.delete(message.author.id)
+    }
+
+
     // Mensagens que não comecem com prefixo são adicionadas ao arquivo de coleta de mensagens anônimas
     if (!message.content.startsWith(config.prefix)){
         colectedChatTrainingMessages = colectedChatTrainingMessages + `${message.content}\r\n`
@@ -577,7 +714,7 @@ client.on("message", (message) =>{
         return;
     }
 // com prefixo abaixo
-    if(message.author.bot && !canReceiveCommands) return;
+    if(message.author.bot || !canReceiveCommands) return;
 
     // Comando de D1F
     if(message.channel.name == "d1f" && !message.content.includes("http")){
@@ -602,9 +739,12 @@ client.on("message", (message) =>{
         })
     }
     // Checa se a mensagem foi enviada no chat de comandos
-    if(message.guild.name == "FXM"){
-        if(message.channel.name !== "bot_commands" && !checkAdmin(message,false)) return
+    if(message.channel.type !== "dm"){
+        if(message.guild.name == "FXM"){
+            if(message.channel.name !== "bot_commands" && !checkAdmin(message,false)) return
+        }
     }
+    
 /*
 ==================================================================================================
    ___  _           _   
@@ -849,7 +989,7 @@ client.on("message", (message) =>{
         // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         
         case "profile":
-        case "perfil":
+        case "perfil": 
             if(message.mentions.members.size == 0){ // Caso não haja nenhuma menção...
                 if(profiles[message.author.id]){
                     message.channel.send({embed: profiles[message.author.id].embed}) // Envia o próprio perfil, caso ele exista
