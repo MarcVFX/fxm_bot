@@ -41,6 +41,6 @@
                         "ban" : {"info" : "Bane um membro do server por um determinado tempo", "moreInfo" : " [@membro] [motivo]` Ambos argumentos são obrigatórios, o membro banido receberá um comando para fazer um apelo, caso ele ache que o bam foi abusivo."},
                         "unban" : {"info" : "Remove o banimento de um membro", "moreInfo" : " [membro]` O argumento pode ser obtido no registro de auditoria do banimento ou no log criado pelo bot."},
                         "unbanid" : {"info" : "Remove o banimento de um membro através do id dele", "moreInfo" : " [id]` O argumento pode ser obtido no registro de autoria do banimento ou no log criado pelo bot."},
-                        "changelog" : {"info": "Adiciona uma nova versão ao changelog do bot", "moreInfo" : " add [versão] [descrição curta]:[descrição detalhada]` Todos os argumentos são obrigatórios, a versão será adicionada ao topo da lista do changelog."}
+                        "changelog" : {"info": "Adiciona uma nova versão ao changelog do bot", "moreInfo" : " add [versão] [descrição curta]><[descrição detalhada]` Todos os argumentos são obrigatórios, a versão será adicionada ao topo da lista do changelog."}
         }
 }
