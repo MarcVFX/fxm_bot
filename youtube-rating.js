@@ -21,35 +21,22 @@ function authenticate (url){
     }
     return snekfetch.post(postURL, {headers:{"Content-Type" : "application/x-www-form-urlencoded"}})
         .send(payload)
-        .then(r =>{
-            console.log(r.body)
-            return r
-        })
-        .catch(err =>{
-            console.log(err.body.error_description)
-        })
 }
 
-function refreshToken(token){
-    if(!token){
-        console.log("Token not defined")
+function refreshToken(refreshToken){
+    if(!refreshToken){
+        console.log("refreshToken not defined")
         return
     }
     var postURL = "https://accounts.google.com/o/oauth2/token"
     var payload = {
-        refresh_token: token,
+        refresh_token: refreshToken,
         client_id: "340653516483-6g62fc176suh84esvq5aq760scditkgp.apps.googleusercontent.com",
         client_secret: "ozP_O27aeLXWEiLnanYdXWOs",  
         grant_type: "refresh_token"
     }
-    snekfetch.post(postURL, {headers:{"Content-Type" : "application/x-www-form-urlencoded"}})
+    return snekfetch.post(postURL, {headers:{"Content-Type" : "application/x-www-form-urlencoded"}})
         .send(payload)
-        .then(r =>{
-            return r
-        })
-        .catch(err =>{
-            console.log(err.body.error_description)
-        })
 }
 
 function revogueToken(token){
@@ -57,9 +44,7 @@ function revogueToken(token){
         console.log("Token not defined")
         return
     }
-    snekfetch.get("https://accounts.google.com/o/oauth2/revoke?token=" + token)
-    .then(r=>console.log(r))
-    .catch(r=>console.log(r))
+    return snekfetch.get("https://accounts.google.com/o/oauth2/revoke?token=" + token)
 }
 
 function rate(id,rate,token){
@@ -76,8 +61,6 @@ function rate(id,rate,token){
         return
     }
     return snekfetch.post(`https://www.googleapis.com/youtube/v3/videos/rate?id=${id}&rating=${rate}&key=AIzaSyAjRQYSwcvSA9-BXkZx4wAXmb1-sEpZAbw&access_token=${token}`)
-        .then(r=>{return r.body})
-        .catch(r=>{return r.body})
 }
 
 function getRate(id,token){
@@ -90,8 +73,6 @@ function getRate(id,token){
         return
     }
     return snekfetch.post(`https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.videos.getRating?id=${id}&key=AIzaSyAjRQYSwcvSA9-BXkZx4wAXmb1-sEpZAbw&access_token=${token}`)
-    .then(r=> {return r.body})
-    .catch(r=>console.log(r))
 }
 
 function addComment(id,text,token){
@@ -113,7 +94,7 @@ function addComment(id,text,token){
             var items = r.body.items[0]
             channelId = items.snippet.channelId
         })
-    snekfetch.post("https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&key=AIzaSyAjRQYSwcvSA9-BXkZx4wAXmb1-sEpZAbw&access_token="+token)
+    return snekfetch.post("https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&key=AIzaSyAjRQYSwcvSA9-BXkZx4wAXmb1-sEpZAbw&access_token="+token)
         .send({
             "snippet": {
                 "channelId": channelId,
@@ -125,8 +106,6 @@ function addComment(id,text,token){
                 "videoId": id
                }
         })
-        .then(r => {return r.body})
-        .catch(r => {return r.body})
 }
 
 module.exports = {

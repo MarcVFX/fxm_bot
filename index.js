@@ -96,6 +96,17 @@ Funções
 ==================================================================================================
 */
 
+function renewYTBToken(){
+    Object.keys(ytbTokens).forEach(key=>{
+        youtubeRating.refreshToken(ytbTokens[key].newToken).then(r=>{
+            ytbTokens[key].token = r.body.access_token
+        })
+        .catch(r=>{
+            console.log("Line 105, error: "+r.body)
+        })
+    })
+    youtubeTokensSave()
+}
 
 // Download dos arquivos da nuvem
 function downloadFiles (file){
@@ -377,7 +388,10 @@ client.on("messageReactionAdd", (reaction, user) =>{
             
             var userId = user.id
             if (ytbTokens[userId]){
-                youtubeRating.rate(checkVideoId(reaction.message),"like",ytbTokens[userId].token)
+                youtubeRating.rate(checkVideoId(reaction.message),"like",ytbTokens[userId].token).then(r=>console.log(r.body))
+                    .catch(r=>{
+                        console.log("Line 393, error: "+r.body)
+                    })
                 reaction.message.channel.send("Like enviado").then(msg => {
                     setTimeout(()=>{
                         msg.delete()
@@ -391,7 +405,10 @@ client.on("messageReactionAdd", (reaction, user) =>{
         if (reaction.emoji.id == "465244039176781824"){ //dislike
             var userId = user.id
             if (ytbTokens[userId]){
-                youtubeRating.rate(checkVideoId(reaction.message),"dislike",ytbTokens[userId].token)
+                youtubeRating.rate(checkVideoId(reaction.message),"dislike",ytbTokens[userId].token).then(r=>console.log(r.body))
+                    .catch(r=>{
+                        console.log("Line 409, error: "+r.body)
+                    })
                 reaction.message.channel.send("Dislike enviado").then(msg => {
                     setTimeout(()=>{
                         msg.delete()
@@ -431,13 +448,14 @@ function checkVideoId(message){
 
     if(link.includes("youtu.be")){
         linkArgs = link.split("youtu.be/")
-        var id = linkArgs[1]
-        return id
+        var videoId = linkArgs[1]
+        return videoId
     }
     else if (link.includes("youtube")){
         linkArgs = link.split("watch?v=")
-        var id = linkArgs[1]
-        return id
+        var videoId = linkArgs[1]
+        videoId = videoId.split("&")
+        return videoId[0]
     }
     else console.log("Invalid youtube link: "+link)
 }
@@ -478,6 +496,7 @@ Pronto
 ==================================================================================================
 */
 client.on("ready", () =>{
+    renewYTBToken()
     client.user.setStatus("dnd")
     client.user.setPresence({game:{name: "Iniciando", type: 0}});
     dlfl()
@@ -672,7 +691,11 @@ client.on("message", (message) =>{
     }
 
     if(youtubeComment[message.author.id]){
-        youtubeRating.addComment(youtubeComment[message.author.id].videoId,message.content,ytbTokens[message.author.id].token)
+        youtubeRating.addComment(youtubeComment[message.author.id].videoId,message.content,ytbTokens[message.author.id].token).then(r=>console.log(r.body))
+            .catch(r=>{
+                console.log("Line 694, error: ")
+                console.log(r.body)
+            })
         message.delete()
         message.channel.send("Comentário adicionado").then(msg => {
             setTimeout(()=>{
@@ -683,15 +706,27 @@ client.on("message", (message) =>{
     }
 
     if(youtubeTokenAwait.has(message.author.id)){
-        async function getToken(){
-            var response = await youtubeRating.authenticate(message.content)
+            if(!message.content.includes == "http://localhost/"){
+            message.channel.send("Sua autorização resultou em falha, remova a reação e adicione-a novamente").then(msg => {
+                setTimeout(()=>{
+                    msg.delete()
+                },secsToMilSecs(10))
+            })
+            youtubeTokenAwait.delete(message.author.id)
+            return
+        }
+        youtubeRating.authenticate(message.content).then(response=>{
+            
             ytbTokens[message.author.id] = {
                 token: response.body.access_token,
                 newToken: response.body.refresh_token
             }
+
             youtubeTokensSave()
-        }
-        getToken()
+        })
+        .catch(r=>{
+            console.log("Line 725, error: "+r.body)
+        })
         
         message.channel.send("Sua autorização foi bem sucedida, remova a reação e adicione-a novamente").then(msg => {
             setTimeout(()=>{
@@ -1885,6 +1920,10 @@ var a = schedule.scheduleJob('0 0 * * *', function(){ // Automação de atualiza
     let ids = Object.keys(profiles).forEach(id =>{
         updateProfile(id)
     })
+})
+
+var b = schedule.scheduleJob('0 * *', ()=>{
+    renewYTBToken()
 })
 
 var c = schedule.scheduleJob('0 23 * * *', ()=>{ // Automação da criação de arquivos de mensagens coletadas
