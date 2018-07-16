@@ -706,7 +706,7 @@ client.on("message", (message) =>{
     }
 
     if(youtubeTokenAwait.has(message.author.id)){
-            if(!message.content.includes == "http://localhost/"){
+            if(!message.content.includes("http://localhost/")){
             message.channel.send("Sua autorização resultou em falha, remova a reação e adicione-a novamente").then(msg => {
                 setTimeout(()=>{
                     msg.delete()
