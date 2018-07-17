@@ -126,7 +126,8 @@ function uploadFiles (file){
     dbx({
         resource: 'files/upload',
         parameters: {
-            path: '/FXM Bot/Database/' + file
+            path: '/FXM Bot/Database/' + file,
+            mode: 'overwrite'
         },
         readStream: fs.createReadStream('./Database/' + file)
     }, (err, result, response) => {
