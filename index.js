@@ -912,7 +912,7 @@ client.on("message", (message) =>{
         case "shorter":
         case "encurtar":
         case "encurtardor":
-            if(args[0] == undefined || message.content.includes("http")){ // Verifica se há alguma URL
+            if(args[0] == undefined || !message.content.includes("http")){ // Verifica se há alguma URL
                 message.channel.send("Você precisa especificar uma URL a ser encurtada")
                 return;
             }
