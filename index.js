@@ -1371,7 +1371,9 @@ client.on("message", (message) =>{
                 if(checkMod(message)){ // Checa se é moderador
                     messageContainer = message // Mensagem
                     whoWarned = message.author.tag // Quem avisou
-                    
+                    toWarn = message.mentions.members.first() // Quem deve ser avisado
+                    reason = args.slice(1).join(" ") // Motivo
+                 
                     if(message.mentions.members.size == 0){ // Verifica se avisou alguém
                         message.channel.send("Você precisa mencionar um membro")
                         return;
@@ -1385,8 +1387,7 @@ client.on("message", (message) =>{
                         return;
                     }
 
-                    toWarn = message.mentions.members.first() // Quem deve ser avisado
-                    reason = args.slice(1).join(" ") // Motivo
+
                     
 
                     if(warneds[toWarn.id]){ // Verifica se o membro já tem um aviso
